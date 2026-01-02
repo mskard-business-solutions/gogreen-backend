@@ -2,10 +2,15 @@ import { Router, type Response, type IRouter } from 'express';
 import { authenticateToken, requireAdmin, requireEditor, type AuthRequest } from '../middleware/auth.middleware.js';
 import { PendingChangeModel } from '../models/pending-change.model.js';
 import { AuditLogModel } from '../models/audit-log.model.js';
+import { ProductModel } from '../models/product.model.js';
+import { CategoryModel } from '../models/category.model.js';
+import { SubcategoryModel } from '../models/subcategory.model.js';
 import { z } from 'zod';
 import { ActionType, ChangeStatus, UserRole } from '../types/auth.js';
 
 const router: IRouter = Router();
+
+// ... (previous code remains unchanged until review route)
 
 // Create a pending change (Admins and Editors)
 const createChangeSchema = z.object({
@@ -156,6 +161,43 @@ router.post('/:id/review', authenticateToken, requireAdmin, async (req: AuthRequ
     if (pendingChange.status !== 'pending') {
       res.status(400).json({ error: 'This change has already been reviewed' });
       return;
+    }
+
+    // Apply the change if approved
+    if (data.status === 'approved') {
+      const { resourceType, resourceId, action, changeData } = pendingChange;
+      
+      try {
+        if (resourceType === 'product') {
+          if (action === 'create') {
+            await ProductModel.create(changeData as any);
+          } else if (action === 'update' && resourceId) {
+            await ProductModel.update(resourceId, changeData as any);
+          } else if (action === 'delete' && resourceId) {
+            await ProductModel.delete(resourceId);
+          }
+        } else if (resourceType === 'category') {
+           if (action === 'create') {
+            await CategoryModel.create(changeData as any);
+          } else if (action === 'update' && resourceId) {
+            await CategoryModel.update(resourceId, changeData as any);
+          } else if (action === 'delete' && resourceId) {
+            await CategoryModel.delete(resourceId);
+          }
+        } else if (resourceType === 'subcategory') {
+           if (action === 'create') {
+            await SubcategoryModel.create(changeData as any);
+          } else if (action === 'update' && resourceId) {
+            await SubcategoryModel.update(resourceId, changeData as any);
+          } else if (action === 'delete' && resourceId) {
+            await SubcategoryModel.delete(resourceId);
+          }
+        }
+      } catch (err) {
+        console.error('Error applying approved change:', err);
+        res.status(500).json({ error: 'Failed to apply approved change to database' });
+        return;
+      }
     }
 
     // Review the change
