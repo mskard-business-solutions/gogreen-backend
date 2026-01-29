@@ -1,3 +1,8 @@
+import { config } from 'dotenv';
+
+// Load environment variables from .env.local
+config({ path: '.env.local' });
+
 import { db } from './db/index.js';
 import { users } from './db/schema.js';
 import argon2 from 'argon2';
